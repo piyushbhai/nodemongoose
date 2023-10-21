@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
+const bcrypt = require('bcrypt');
+const verifyToken = require('../middleware/auth');
 
 // GET all users
-router.get('/users', async (req, res) => {
+router.get('/',verifyToken, async (req, res) => {
   try {
     const users = await User.find();
     res.json(users);
@@ -13,18 +15,22 @@ router.get('/users', async (req, res) => {
 });
 
 // GET a specific user by ID
-router.get('/users/:id', getUser, (req, res) => {
+router.get('/:id', [verifyToken,getUser], (req, res) => {
   res.json(res.user);
 });
 
 // POST a new user
-router.post('/users', async (req, res) => {
+router.post('/', async (req, res) => {
+  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+  // console.log(hashedPassword); return
   const user = new User({
     name: req.body.name,
     email: req.body.email,
+    password: hashedPassword,
     role: req.body.role
   });
 
+  
   try {
     const newUser = await user.save();
     res.status(201).json(newUser);
@@ -34,7 +40,7 @@ router.post('/users', async (req, res) => {
 });
 
 // PUT/update a user by ID
-router.put('/users/:id', getUser, async (req, res) => {
+router.put('/:id', [verifyToken,getUser], async (req, res) => {
   if (req.body.name != null) {
     res.user.name = req.body.name;
   }
@@ -56,10 +62,16 @@ router.put('/users/:id', getUser, async (req, res) => {
 });
 
 // DELETE a user by ID
-router.delete('/users/:id', getUser, async (req, res) => {
+router.delete('/:id', verifyToken,async (req, res) => {
+  const { id } = req.params;
   try {
-    await res.user.remove();
-    res.json({ message: 'User deleted' });
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      res.status(200).send({ message: 'User not found'});
+    }
+
+    res.status(200).send({ message: `User with ID ${id} deleted successfully` });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

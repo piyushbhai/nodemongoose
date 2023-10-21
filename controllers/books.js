@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Book = require('../models/book');
+const verifyToken = require('../middleware/auth');
 
-router.get('/', async (req, res) => {
+router.get('/',verifyToken,  async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const titleFilter = req.query.title || '';
@@ -35,7 +36,7 @@ router.get('/', async (req, res) => {
   
 
 // Get all books
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const books = await Book.find({});
     res.json(books);
@@ -45,12 +46,12 @@ router.get('/', async (req, res) => {
 });
 
 // Get one book
-router.get('/:id', getBook, (req, res) => {
+router.get('/:id', [verifyToken,getBook], (req, res) => {
   res.json(res.book);
 });
 
 // Create a book
-router.post('/', async (req, res) => {
+router.post('/',verifyToken, async (req, res) => {
   const book = new Book({
     title: req.body.title,
     author: req.body.author,
@@ -66,7 +67,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update a book
-router.patch('/:id', getBook, async (req, res) => {
+router.patch('/:id', [verifyToken, getBook], async (req, res) => {
   if (req.body.title != null) {
     res.book.title = req.body.title;
   }
@@ -86,9 +87,14 @@ router.patch('/:id', getBook, async (req, res) => {
 });
 
 // Delete a book
-router.delete('/:id', getBook, async (req, res) => {
+router.delete('/:id', [verifyToken,getBook], async (req, res) => {
+  const { id } = req.params;
   try {
-    await res.book.remove();
+    const deletedUser = await Book.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      res.status(200).send({ message: 'Book not found'});
+    }
     res.json({ message: 'Deleted This Book' });
   } catch (error) {
     res.status(500).json({ message: error.message });

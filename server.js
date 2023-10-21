@@ -1,26 +1,26 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const bookRouter = require('./routes/books');
-const userRoutes = require('./routes/users');
+const cors = require('cors');
+const conn = require('./db/conn');
+
+const bookRouter = require('./controllers/books');
+const userRoutes = require('./controllers/users');
+const auth = require('./controllers/auth');
+const blogPosts = require('./controllers/blogPosts');
 require('dotenv').config();
 
-
 const app = express();
+app.use(cors());
 const PORT = process.env.PORT || 5000;
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use(bodyParser.json());
-app.use('/books', bookRouter);
+app.use('/uploads',express.static(__dirname + '/uploads'));
+
+
+app.use('/book', bookRouter);
 app.use('/user', userRoutes);
+app.use('/auth', auth);
+app.use('/blog', blogPosts);
 
-console.log(process.env.MONGODB_URI);
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.listen(PORT)
